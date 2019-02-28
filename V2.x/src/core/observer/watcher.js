@@ -197,6 +197,7 @@ export default class Watcher {
         // In activated mode, we want to proactively perform the computation
         // but only notify our subscribers when the value has indeed changed.
         // 调用getAndInvoke方法会重新求值并对比新旧值是否相同，如果满足相同的条件则不会触发响应，只有当值确实变化时才会触发响应
+        // getAndInvoke方法执行的get()实际就是计算属性的get方法，当有发生变化时，触发渲染函数重新渲染
         this.getAndInvoke(() => {
           // this.dep 中将收集渲染函数作为依赖，执行后就会导致重新渲染，最终完成视图的更新
           this.dep.notify()

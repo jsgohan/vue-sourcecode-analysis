@@ -71,10 +71,16 @@ function initProps (vm: Component, propsOptions: Object) {
   const isRoot = !vm.$parent
   // root instance props should be converted
   if (!isRoot) {
+    // toggleObserving开关会修改src/core/observer/index.js文件中shouldObserve变量的值
+    // shouldObserve变量 用在src/core/observe/index.js 中的observe函数
+    // 当调用observe函数去观测一个数据对象时，只有当变量shouldObserve为真的时候才会进行观测
     toggleObserving(false)
   }
   for (const key in propsOptions) {
+    // keys与vm.$options._propKeys属性具有相同的引用
     keys.push(key)
+    // validateProp函数用来校验名字(key)给定的prop数据是否符合预期的类型，返回相应prop的值（或默认值）
+    // 常量value中保存着prop的值
     const value = validateProp(key, propsOptions, propsData, vm)
     /* istanbul ignore else */
     if (process.env.NODE_ENV !== 'production') {

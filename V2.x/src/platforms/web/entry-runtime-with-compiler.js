@@ -67,9 +67,18 @@ Vue.prototype.$mount = function (
 
       // compileToFunctions函数将模板字符串(template)编译为渲染函数(render)
       const { render, staticRenderFns } = compileToFunctions(template, {
+        //  shouldDecodeNewlines/shouldDecodeNewlinesForHref目的是对浏览器的怪癖做兼容，bool值
         shouldDecodeNewlines,
         shouldDecodeNewlinesForHref,
+        // delimiters/comments只有在完整版的vue中可用
+        // entry-runtime-with-compiler.js文件时完整版Vue的入口，运行时版的Vue不存在这些内容所以不会起作用
+        // delimiters 改变纯文本插入分隔符
+        // 分隔符变成了ES6模板字符串的风格
+        // new Vue({
+        //   delimiters: ['${', '}']
+        // })
         delimiters: options.delimiters,
+        // 当设为true时，将会保留且渲染模板中的HTML注释
         comments: options.comments
       }, this)
       options.render = render
