@@ -1,5 +1,7 @@
 /* @flow */
 
+// parser之后生成的AST，会用来生成不同平台的目标代码，具体就是在该文件中处理
+// codegen目录内的代码会导出一个叫做generate的函数，这个函数的作用是根据给定的AST生成最终的目标平台的代码
 import { genHandlers } from './events'
 import baseDirectives from '../directives/index'
 import { camelize, no, extend } from 'shared/util'

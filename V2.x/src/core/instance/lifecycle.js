@@ -192,7 +192,7 @@ export function mountComponent (
     // 其实在vm._update内部是通过虚拟DOM的补丁算法(patch)来完成的
     updateComponent = () => {
       // vm._render函数的作用是调用vm.$options.render函数并返回生成的虚拟节点(vnode)
-      // vm._update函数的做义工是把vm._render函数生成的虚拟节点渲染成真正的DOM
+      // vm._update函数的作用是把vm._render函数生成的虚拟节点渲染成真正的DOM
       vm._update(vm._render(), hydrating)
     }
   }

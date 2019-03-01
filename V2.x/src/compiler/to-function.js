@@ -8,6 +8,11 @@ type CompiledFunctionResult = {
   staticRenderFns: Array<Function>;
 };
 
+/**
+ * 接收两个参数
+ * @param code 函数体字符串，该字符串将通过new Function(code)的方式创建为函数
+ * @param errors 数组，作用是当采用new Function(code)创建函数发生错误时用来收集错误
+ */
 function createFunction (code, errors) {
   try {
     return new Function(code)
@@ -87,8 +92,11 @@ export function createCompileToFunctionFn (compile: Function): Function {
     const res = {}
     // fnGenErrors
     const fnGenErrors = []
-    // render属性实际上就是最终生成的渲染函数，值是通过createFunction创建出来的，createFunction函数定义在to-function.js文件开头
+    // render属性实际上就是最终生成的渲染函数
+    // 值是通过createFunction创建出来的，createFunction函数定义在to-function.js文件开头
+    // 可以得知，经过compile函数编译模板字符串后所得到的是字符串形式的函数体
     res.render = createFunction(compiled.render, fnGenErrors)
+    // staticRenderFns主要作用是渲染优化
     res.staticRenderFns = compiled.staticRenderFns.map(code => {
       return createFunction(code, fnGenErrors)
     })
@@ -107,6 +115,12 @@ export function createCompileToFunctionFn (compile: Function): Function {
       }
     }
 
+    // 缓存结果
     return (cache[key] = res)
   }
 }
+// toString.js主要作用有
+// 1. 缓存编译结果，通过createCompileToFunctionFn函数内声明的cache常量实现
+// 2. 调用compile函数将模板字符串转换成渲染函数字符串
+// 3. 调用createFunction函数将模板函数字符串转换成真正的渲染函数
+// 4. 打印编译错误，包括：模板字符串 -> 渲染函数字符串 以及 渲染函数字符串 -> 渲染函数 这两个阶段的错误

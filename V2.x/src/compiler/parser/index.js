@@ -1,5 +1,7 @@
 /* @flow */
 
+// 该函数是一个解析器，作用是将模板字符串解析为对应的抽象语法树(AST)
+// 有了AST后就可以根据这个AST生成不同平台的目标代码
 import he from 'he'
 import { parseHTML } from './html-parser'
 import { parseText } from './text-parser'

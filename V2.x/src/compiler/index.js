@@ -13,10 +13,12 @@ export const createCompiler = createCompilerCreator(function baseCompile (
   template: string,
   options: CompilerOptions
 ): CompiledResult {
+  // 编译器函数调用
   const ast = parse(template.trim(), options)
   if (options.optimize !== false) {
     optimize(ast, options)
   }
+  // generate就是生成指定平台的代码，如果想生成别的平台代码，可以在ast不变的基础上，重写generate函数即可
   const code = generate(ast, options)
   return {
     ast,
