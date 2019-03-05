@@ -2,6 +2,11 @@
 
 // 该函数是一个解析器，作用是将模板字符串解析为对应的抽象语法树(AST)
 // 有了AST后就可以根据这个AST生成不同平台的目标代码
+// 分为三个阶段：词法分析->句法分析->代码生成（在codegen/index.js的generate函数中执行）
+// 词法分析阶段Vue把字符串模板解析成一个个的令牌(token)，该令牌将用于句法分析阶段
+// 句法分析阶段会根据令牌生成一棵AST
+// 最后根据AST生成最终的渲染函数
+// parse: 解析 parser: 解析器
 import he from 'he'
 import { parseHTML } from './html-parser'
 import { parseText } from './text-parser'
@@ -62,6 +67,7 @@ export function createASTElement (
 
 /**
  * Convert HTML string to AST.
+ * parse函数的作用是在词法分析的基础上做句法分析从而生成一棵AST
  */
 export function parse (
   template: string,
@@ -108,6 +114,8 @@ export function parse (
     }
   }
 
+  // 主要通过调用parseHTML函数对模板字符串进行解析
+  // parseHTML函数的作用就是用来做词法分析的
   parseHTML(template, {
     warn,
     expectHTML: options.expectHTML,
