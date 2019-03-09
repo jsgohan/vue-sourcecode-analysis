@@ -2,8 +2,13 @@
 
 import { cached, extend, toObject } from 'shared/util'
 
+/**
+ * 拆解非绑定的style属性值为对象形式
+ */
 export const parseStyleText = cached(function (cssText) {
   const res = {}
+  // 举例<div style="color: red; background: url(www.xxx.com?a=1&amp;copy=3);"></div>
+  // 上面的例子中有三个;,但实际只有两个;才能作为样式规则分隔符
   const listDelimiter = /;(?![^(]*\))/g
   const propertyDelimiter = /:(.+)/
   cssText.split(listDelimiter).forEach(function (item) {

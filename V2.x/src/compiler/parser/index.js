@@ -344,6 +344,11 @@ export function parse (
     // end钩子函数，在解析html字符串时每次遇到结束标签时就会调用该函数
     end () {
       // remove trailing whitespace
+      // 当遇到结束标签的时候意味着currentParent变量所代表的标签以及其子节点全部解析完毕
+      // 此时应该把currentParent变量的引用修改为当前标签的父标签，这样我们就将作用域还原给了上层节点
+      // 以保证解析过程中正确的父子关系
+
+      // 去除当前元素最后一个空白子节点
       const element = stack[stack.length - 1]
       const lastNode = element.children[element.children.length - 1]
       if (lastNode && lastNode.type === 3 && lastNode.text === ' ' && !inPre) {
@@ -356,6 +361,9 @@ export function parse (
     },
     // chars钩子函数，在解析html字符串时每次遇到纯文本时就会调用该函数
     chars (text: string) {
+      // 什么情况下会出现文本节点没有父级节点呢？
+      // 第一：模板中只有文本节点 <template>我是文本节点</template>
+      // 第二：文本节点在根元素的外面 <template><div>根元素内的文本节点</div>根元素外的文本节点
       if (!currentParent) {
         if (process.env.NODE_ENV !== 'production') {
           if (text === template) {
@@ -368,6 +376,7 @@ export function parse (
             )
           }
         }
+        // 如果模板不符合以上要求此时chars钩子函数会立即return，不会继续做后续的工作
         return
       }
       // IE textarea placeholder bug
@@ -379,12 +388,25 @@ export function parse (
         return
       }
       const children = currentParent.children
+      // 如果为真，先使用isTextTag函数检测当前文本节点的父节点是否是文本标签(即<script>标签或<style>标签)
+      // 如果当前文本节点的父节点是文本标签，那么则原封不动的保留原始文本
+      // 否则使用decodeHTMLCached函数对文本进行解码
+      // 原因是 <pre>&lt;div&gt;我是一个DIV&lt;/div&gt;</pre> 这段如果不进行解码，就会原样输出
+      // 并不是我们想要的<div>我是一个DIV</div>
+      // 因为正常情况，解码的操作是由浏览器解析并渲染的，在vue中，是使用document.createTextNode函数实现，必须要先解码才能创建
       text = inPre || text.trim()
         ? isTextTag(currentParent) ? text : decodeHTMLCached(text)
         // only preserve whitespace if its not right after a starting tag
         : preserveWhitespace && children.length ? ' ' : ''
       if (text) {
         let res
+        // 1. 当前文本节点不存在与使用v-pre指令的标签之内
+        // 2. 当前文本节点不是空格字符
+        // 3. 使用parseText函数成功解析当前文本节点的内容
+        // parseText函数的作用就是用来解析这段包含了字面量表达式的文本的
+        // 如果解析成功，则说明该文本节点的内容确实包含字面量表达式
+        // 并创建一个类型为2(type=2)的元素描述对象，添加到父级的子节点中
+        // 类型为2的元素描述对象拥有三个特殊的属性，分别是expression、tokens及text
         if (!inVPre && text !== ' ' && (res = parseText(text, delimiters))) {
           children.push({
             type: 2,
@@ -392,7 +414,12 @@ export function parse (
             tokens: res.tokens,
             text
           })
-        } else if (text !== ' ' || !children.length || children[children.length - 1].text !== ' ') {
+        }
+        // 有三种情况以上if语句判断会失败
+        // 1. 文本节点存在于使用了v-pre指令的标签之内
+        // 2. 文本节点时空格字符
+        // 3. 文本节点的文本内容通过parseText函数解析失败
+        else if (text !== ' ' || !children.length || children[children.length - 1].text !== ' ') {
           children.push({
             type: 3,
             text
@@ -401,6 +428,9 @@ export function parse (
       }
     },
     // comment钩子函数，在解析html字符串时每次遇到注释节点时就会调用该函数
+    // 解析器是否会解析并保留注释节点，是由shouldKeepComment编译器选项决定的
+    // 开发者可以在创建Vue实例的时候通过设置comments选项的值来控制编译器的shouldKeepComment选项
+    // 默认情况下comments选项的值为false，即不保留注释，假如将其设置为true，comment钩子函数会被调用
     comment (text: string) {
       currentParent.children.push({
         type: 3,
@@ -482,6 +512,30 @@ export function processElement (element: ASTElement, options: CompilerOptions) {
   for (let i = 0; i < transforms.length; i++) {
     element = transforms[i](element, options) || element
   }
+  /**
+   * 之前已经处理后的属性有：
+   * v-pre
+   * v-for
+   * v-if、v-else-if、v-else
+   * v-once
+   * key
+   * ref
+   * slot、slot-scope、scope、name
+   * is、inline-template
+   * 除了这些，还有以下的没有处理：
+   * v-text
+   * v-html
+   * v-show
+   * v-on
+   * v-bind
+   * v-model
+   * v-cloak
+   * 自定义属性:custom-prop -> 本质就是v-bind
+   * 自定义事件@custom-event -> 本事就是v-on
+   * 自定义的非绑定的属性other-prop
+   * 还有部分属性的处理：
+   * class、style，但这两个是在tranforms数组中处理的
+   */
   processAttrs(element)
 }
 
@@ -730,16 +784,32 @@ function processComponent (el) {
   }
 }
 
+/**
+ * v-text
+* v-html
+* v-show
+* v-on
+* v-bind
+* v-model
+* v-cloak
+* 自定义属性:custom-prop -> 本质就是v-bind
+* 自定义事件@custom-event -> 本事就是v-on
+* 自定义的非绑定的属性other-prop
+ */
 function processAttrs (el) {
   const list = el.attrsList
   let i, l, name, rawName, value, modifiers, isProp
   for (i = 0, l = list.length; i < l; i++) {
     name = rawName = list[i].name
     value = list[i].value
+    // 匹配属性名是否是v-、@、:开头
+    // <div :custom-prop="someVal" @custom-event="handleEvent" other-prop="static-prop"></div>
+    // 其中 :custom-prop 属性和 @custom-event 属性将会被 if 语句块内的代码处理，而对于 other-prop 属性则会被 else 语句块内的代码处理
     if (dirRE.test(name)) {
       // mark element as dynamic
       el.hasBindings = true
       // modifiers
+      // 完整的指令包含指令的名称、指令的参数、指令的修饰符以及指令的值，用于解析指令中的修饰符
       modifiers = parseModifiers(name)
       if (modifiers) {
         name = name.replace(modifierRE, '')
@@ -747,6 +817,8 @@ function processAttrs (el) {
       if (bindRE.test(name)) { // v-bind
         name = name.replace(bindRE, '')
         value = parseFilters(value)
+        // isProp变量标识着该绑定的属性是否是原生DOM对象的属性
+        // 所谓原生DOM对象属性就是能够通过DOM元素对象直接访问的有效API，如innerHTML就是一个原生DOM对象的属性
         isProp = false
         if (modifiers) {
           if (modifiers.prop) {
@@ -758,6 +830,21 @@ function processAttrs (el) {
             name = camelize(name)
           }
           if (modifiers.sync) {
+            // 为了简化子组件不能直接修改prop值，
+            // <child :some-prop:sync="value" />
+            // 等价于
+            // <child :some-prop="value" @update:someProp="handleEvent" />
+            // data() {
+            //   value: ''
+            // },
+            // methods: {
+            //   handleEvent(val) {
+            //     this.value = val
+            //   }
+            // }
+            // sync修饰符的绑定属性等价于多了一个事件侦听，并且事件名称为'update:${驼峰化的属性名}'
+            // addHandler作用为将事件名称与该事件的侦听函数添加到元素描述对象的el.events属性或el.nativeEvents属性中
+            // :some-prop.sync <== 等价于 ==> :some-prop + @update:someProp
             addHandler(
               el,
               `update:${camelize(name)}`,
@@ -768,6 +855,12 @@ function processAttrs (el) {
         if (isProp || (
           !el.component && platformMustUseProp(el.tag, el.attrsMap.type, name)
         )) {
+          // 添加属性到元素描述对象的props数组中，这里的props是原生DOM对象的属性
+          // platformMustUseProp作用是满足以下情况
+          //  input,textare,option,select,progress这些标签的value属性都应该使用元素对象的原生的prop绑定(除了type==='button')
+          //  option标签的selected属性应该使用元素对象的原生的prop绑定
+          //  input标签的checked属性应该使用元素对象的原生的prop绑定
+          //  video标签的muted属性应该使用元素对象的原生的prop绑定
           addProp(el, name, value)
         } else {
           addAttr(el, name, value)
@@ -776,13 +869,27 @@ function processAttrs (el) {
         name = name.replace(onRE, '')
         addHandler(el, name, value, modifiers, false, warn)
       } else { // normal directives
+        /**
+         * 处理剩下的没有处理的指令
+         * v-text
+         * v-html
+         * v-show
+         * v-cloak
+         * v-model
+         * 自定义指令
+         */
         name = name.replace(dirRE, '')
         // parse arg
+        // 假设name变量的值为custom:arg，则最终argMatch常量将是一个数组：[':arg', 'arg']
         const argMatch = name.match(argRE)
+        // arg常量保存的就是参数字符串
         const arg = argMatch && argMatch[1]
         if (arg) {
+          // 移除:arg，获得真正的指令名
           name = name.slice(0, -(arg.length + 1))
         }
+        // 举例 v-custom:arg.modif="myMethod"
+        // 最终调用传递的参数为 addDirective(el, 'custom', 'v-custom:arg.modif', 'myMethod', 'arg', {modif: true})
         addDirective(el, name, rawName, value, arg, modifiers)
         if (process.env.NODE_ENV !== 'production' && name === 'model') {
           checkForAliasModel(el, value)
@@ -790,7 +897,12 @@ function processAttrs (el) {
       }
     } else {
       // literal attribute
+      // 比如id,width等，但class和style属性不会在这里处理，在之前的transforms给处理了
       if (process.env.NODE_ENV !== 'production') {
+        // parseText作用是用来解析字面量表达式的，如<div id="{{ isTrue ? 'a' : 'b' }}">
+        // 其中字符串b就成为字面量表达式
+        // 此时会发出警告，提示开发者使用绑定属性作为替代
+        // <div :id="isTrue ? 'a' : 'b'"></div>
         const res = parseText(value, delimiters)
         if (res) {
           warn(
@@ -801,9 +913,14 @@ function processAttrs (el) {
           )
         }
       }
+      // 所有非指令属性，都直接将该属性的值当做一个纯字符串对待
       addAttr(el, name, JSON.stringify(value))
       // #6887 firefox doesn't update muted state if set via attribute
       // even immediately after element creation
+      // 实际上元素描述对象的el.attrs数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中使用setAttribute方法将属性添加到真实DOM元素上
+      // 而在火狐浏览器中存在无法通过DOM元素的setAttribute方法为video标签添加muted属性的问题，此时会使用以下操作来处理
+      // 将属性添加到el.props数组中，因为元素描述对象的el.props数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中直接使用真实DOM对象添加
+      // 也就是说对于video标签muted属性的添加方式为: videoEl.muted = true
       if (!el.component &&
           name === 'muted' &&
           platformMustUseProp(el.tag, el.attrsMap.type, name)) {
@@ -825,12 +942,18 @@ function checkInFor (el: ASTElement): boolean {
 }
 
 function parseModifiers (name: string): Object | void {
+  // 匹配.及.后面的字符，也就是修饰符
+  // 假设字符串为'v-bind:some-prop.sync'，则得到的数组为[".sync"]
   const match = name.match(modifierRE)
   if (match) {
     const ret = {}
     match.forEach(m => { ret[m.slice(1)] = true })
     return ret
   }
+  // 返回的ret为
+  // {
+  //   sync: true
+  // }
 }
 
 /**

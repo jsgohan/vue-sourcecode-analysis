@@ -45,6 +45,15 @@ export function addDirective (
   el.plain = false
 }
 
+/**
+ * 
+ * @param {*} el 当前元素描述对象
+ * @param {*} name 绑定属性的名字，即事件名称
+ * @param {*} value 绑定属性的值，这个值可能是事件回调函数名字，有可能是内联语句，有可能是函数表达式
+ * @param {*} modifiers 指令对象
+ * @param {*} important 可选参数，布尔值，代表着天剑的事件侦听函数的重要级别
+ * @param {*} warn 
+ */
 export function addHandler (
   el: ASTElement,
   name: string,
@@ -69,6 +78,7 @@ export function addHandler (
   // check capture modifier
   if (modifiers.capture) {
     delete modifiers.capture
+    // 例如<div @click.capture="handleClick"></div> 实际name改为了!click
     name = '!' + name // mark the event as captured
   }
   if (modifiers.once) {
@@ -84,6 +94,9 @@ export function addHandler (
   // normalize click.right and click.middle since they don't actually fire
   // this is technically browser-specific, but at least for now browsers are
   // the only target envs that have right/middle clicks.
+  // 注意，如果事件绑定了once修饰符，则名字被改为~click，不会等于'click'，所以同时使用once修饰符和right修饰符，点击事件不会被触发
+  // <div @click.right.once="handleClickRightOnce"></div>
+  // 可以改为 <div @contextmenu.once="handleClickRightOnce"></div>
   if (name === 'click') {
     if (modifiers.right) {
       name = 'contextmenu'
@@ -111,10 +124,42 @@ export function addHandler (
   const handlers = events[name]
   /* istanbul ignore if */
   if (Array.isArray(handlers)) {
+    // 这里就是同样的事件绑定了三次以上会调用的
     important ? handlers.unshift(newHandler) : handlers.push(newHandler)
   } else if (handlers) {
+    // 举例 <div @click.prevent="handleclick1" @click="handleclick2"></div>
+    // 定义了两个click事件的侦听，因为两个事件的名称是相同的，会调用两次addHandle函数
+    // 第一次调用时，el.events赋值完，即调用的是else里
+    // el.events = {
+    //   click: {
+    //     value: 'handleclick1',
+    //     modifiers: { prevent: false }
+    //   }
+    // }
+    // 第二次调用，会走这个操作，此时important会影响被添加的handlers对象的顺序，最终会变成一个数组
+    // el.events = {
+    //   click: [{
+    //     value: 'handleclick1',
+    //     modifiers: { prevent: false }
+    //   }, {
+    //     value: 'handleclick2'
+    //   }]
+    // }
     events[name] = important ? [newHandler, handlers] : [handlers, newHandler]
   } else {
+    // 举例 <div @click.once="handleclick"></div>
+    // newHandler对象应该是：
+    // newHandler = {
+    //   value: 'handleclick',
+    //   modifiers: {}
+    // }
+    // 所以最终events为
+    // el.events = {
+    //   '~click' : {
+    //     value: 'handleclick',
+    //     modifiers: {}
+    //   }
+    // }
     events[name] = newHandler
   }
 
