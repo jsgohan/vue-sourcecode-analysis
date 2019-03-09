@@ -7,6 +7,7 @@ export function baseWarn (msg: string) {
   console.error(`[Vue compiler]: ${msg}`)
 }
 
+// 该函数的作用是从第一个参数中"采摘"出函数名字与第二个参数所指定字符串相同的函数，并将它们组成一个数组
 export function pluckModuleFunction<F: Function> (
   modules: ?Array<Object>,
   key: string
@@ -125,14 +126,18 @@ export function getBindingAttr (
   name: string,
   getStatic?: boolean
 ): ?string {
+  // 用getAndRemoveAttr获取名字为 ':' + name 或 'v-bind:' + name的属性值赋值给常量
   const dynamicValue =
     getAndRemoveAttr(el, ':' + name) ||
     getAndRemoveAttr(el, 'v-bind:' + name)
   if (dynamicValue != null) {
+    // 此时需要解析过滤器，并将处理后的值作为最终的返回结果
     return parseFilters(dynamicValue)
   } else if (getStatic !== false) {
+    // 还存在一种不带: 或v-bind: 的情况，即传递给函数的第二个参数是原始的属性名字，并保存在staticValue常量中
     const staticValue = getAndRemoveAttr(el, name)
     if (staticValue != null) {
+      // 保证返回的就是字符串
       return JSON.stringify(staticValue)
     }
   }
@@ -142,6 +147,40 @@ export function getBindingAttr (
 // doesn't get processed by processAttrs.
 // By default it does NOT remove it from the map (attrsMap) because the map is
 // needed during codegen.
+/**
+ * el为元素描述对象
+ * name获取属性的名字
+ * removeFromMap可选，布尔值
+ * 举例
+ * <div v-if="display"></div>
+ * element = {
+ *  type: 1,
+ *  tag: 'div',
+ *  attrsList: [{
+ *    name: 'v-if',
+ *    value: 'display'
+ *  }],
+ *  attrsMap: {
+ *    'v-if': 'display'
+ *  }
+ * }
+ * 该函数返回的值为字符串'display'，同时会将v-if属性从attrsList数组中移除，所以处理后变为：
+ * element = {
+ *  type: 1,
+ *  tag: 'div',
+ *  attrsList: [],
+ *  attrsMap: {
+ *    'v-if': 'display'
+ *  }
+ * }
+ * 如果removeFromMap为true，getAndRemoveAttr(element, 'v-if', true)
+ * element = {
+ *  type: 1,
+ *  tag: 'div',
+ *  attrsList: [],
+ *  attrsMap: {}
+ * }
+ */
 export function getAndRemoveAttr (
   el: ASTElement,
   name: string,
@@ -149,6 +188,7 @@ export function getAndRemoveAttr (
 ): ?string {
   let val
   if ((val = el.attrsMap[name]) != null) {
+    // 目的是找到元素使用数组的splice方法将该数组元素从元素描述对象的attrsList数组中移除
     const list = el.attrsList
     for (let i = 0, l = list.length; i < l; i++) {
       if (list[i].name === name) {
@@ -157,6 +197,7 @@ export function getAndRemoveAttr (
       }
     }
   }
+  // 如果为true，还会将该属性从属性名值表(attrsMap)中移除
   if (removeFromMap) {
     delete el.attrsMap[name]
   }
