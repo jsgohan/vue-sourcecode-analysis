@@ -39,6 +39,30 @@ export type CodegenResult = {
   staticRenderFns: Array<string>
 };
 
+// 实例
+// <ul :class="bindCls" class="list" v-if="isShow">
+//   <li v-for="(item, index) in data" @click="clickItem(index)">{{item}}:{{index}}</li>
+// </ul>
+// 经过编译，执行const code = generate(ast, options),生成的render代码如下：
+// with(this) {
+//   return (isShow) ?
+//     _c('ul', {
+//         staticClass: 'list',
+//         class: bindCls
+//       },
+//       _l((data), function(item, index) {
+//         return _c('li', {
+//           on: {
+//             'click': function($event) {
+//               clickItem(index)
+//             }
+//           }
+//         },
+//         [_v(_s(item) + ':' + _s(index))])
+//       })
+//     ) : _e()
+// }
+
 export function generate (
   ast: ASTElement | void,
   options: CompilerOptions
