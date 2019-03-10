@@ -62,7 +62,9 @@ export type CodegenResult = {
 //       })
 //     ) : _e()
 // }
-
+// 其中_c在src/core/instance/render.js中，_c就是执行createElement创建VNode
+// _l,_v,_s,_e定义在src/core/instance/render-helpers/index.js
+// _l对应renderList渲染列表，_v赌赢createTextVNode创建文本VNode，_e对应createEmptyVNode创建空的VNode
 export function generate (
   ast: ASTElement | void,
   options: CompilerOptions
