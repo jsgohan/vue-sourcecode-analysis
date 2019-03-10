@@ -33,6 +33,8 @@ import {
 } from 'weex/runtime/recycle-list/render-component-template'
 
 // inline hooks to be invoked on component VNodes during patch
+// 参考的是snabbdom，在VNode的patch流程中对外暴露了各种时机的钩子函数，方便做一些额外的事情，
+// 因此在初始化一个Component类型的VNode的过程中实现了以下几个钩子函数
 const componentVNodeHooks = {
   init (vnode: VNodeWithData, hydrating: boolean): ?boolean {
     if (
@@ -109,6 +111,7 @@ export function createComponent (
     return
   }
 
+  // 1. 构造子类构造函数
   const baseCtor = context.$options._base
 
   // plain options object: turn it into a constructor
@@ -183,9 +186,11 @@ export function createComponent (
   }
 
   // install component management hooks onto the placeholder node
+  // 2. 安装组件钩子函数，整个过程就是把componentVNodeHooks的钩子函数合并到data.hook中，在VNode执行patch的过程中执行相关的钩子函数
   installComponentHooks(data)
 
   // return a placeholder vnode
+  // 3. 实例化VNode，组件的vnode是没有children的
   const name = Ctor.options.name || tag
   const vnode = new VNode(
     `vue-component-${Ctor.cid}${name ? `-${name}` : ''}`,

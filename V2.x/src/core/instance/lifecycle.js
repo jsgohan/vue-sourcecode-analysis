@@ -57,6 +57,7 @@ export function lifecycleMixin (Vue: Class<Component>) {
     vm._vnode = vnode
     // Vue.prototype.__patch__ is injected in entry points
     // based on the rendering backend used.
+    // 会调用patch函数，在src/core/vdom/patch.js
     if (!prevVnode) {
       // initial render
       vm.$el = vm.__patch__(vm.$el, vnode, hydrating, false /* removeOnly */)
@@ -221,6 +222,7 @@ export function mountComponent (
   return vm
 }
 
+// 该函数做的事情是，由于更新了vnode，那么vnode对应的实例vm的一系列属性也会发生变化，包括占位符vm.$vnode的更新、slot的更新，listeners的更新，props的更新等
 export function updateChildComponent (
   vm: Component,
   propsData: ?Object,

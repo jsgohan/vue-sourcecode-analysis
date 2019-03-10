@@ -40,6 +40,9 @@ function isTextNode (node): boolean {
   return isDef(node) && isDef(node.text) && isFalse(node.isComment)
 }
 
+// 主要的逻辑就是遍历children，获得单个节点c，然后对c的类型判断，如果是一个数组类型，则递归调用normalizeArrayChildren
+// 如果是基础类型，则通过createTextVNode方法转换成VNode类型
+// 否则就已经是VNode类型了，如果children是一个列表并且列表还存在嵌套的情况，则根据nestedIndex去更新它的key
 function normalizeArrayChildren (children: any, nestedIndex?: string): Array<VNode> {
   const res = []
   let i, c, lastIndex, last
