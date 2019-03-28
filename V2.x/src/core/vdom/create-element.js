@@ -96,7 +96,7 @@ export function _createElement (
     children.length = 0
   }
   if (normalizationType === ALWAYS_NORMALIZE) {
-    // 调用的场景有2中，一个场景是render函数是用户手写的，另一个场景是当编译slot、v-for的时候会产生嵌套数组的情况，会调用normalizeArrayChildren方法
+    // 调用的场景有2种，一个场景是render函数是用户手写的，另一个场景是当编译slot、v-for的时候会产生嵌套数组的情况，会调用normalizeArrayChildren方法
     children = normalizeChildren(children)
   } else if (normalizationType === SIMPLE_NORMALIZE) {
     // 调用的场景是render函数当函数是编译生成的

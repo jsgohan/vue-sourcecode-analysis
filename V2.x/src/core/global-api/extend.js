@@ -15,6 +15,8 @@ export function initExtend (Vue: GlobalAPI) {
 
   /**
    * Class inheritance
+   * 作用实际是构造一个Vue的子类，它使用原型继承的方式把一个纯对象转换一个继承于Vue的构造器Sub并返回，然后对Sub对象本身扩展一些属性
+   * 如扩展options、添加全局API等，并且对配置中的props和computed做了初始化工作，最后对于这个Sub构造函数做了缓存，避免多次执行Vue.extend的时候对同一个子组件重复构造
    */
   Vue.extend = function (extendOptions: Object): Function {
     extendOptions = extendOptions || {}

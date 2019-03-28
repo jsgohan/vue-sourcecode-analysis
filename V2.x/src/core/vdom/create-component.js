@@ -36,6 +36,7 @@ import {
 // 参考的是snabbdom，在VNode的patch流程中对外暴露了各种时机的钩子函数，方便做一些额外的事情，
 // 因此在初始化一个Component类型的VNode的过程中实现了以下几个钩子函数
 const componentVNodeHooks = {
+  // init 方法
   init (vnode: VNodeWithData, hydrating: boolean): ?boolean {
     if (
       vnode.componentInstance &&
@@ -46,10 +47,13 @@ const componentVNodeHooks = {
       const mountedNode: any = vnode // work around flow
       componentVNodeHooks.prepatch(mountedNode, mountedNode)
     } else {
+      // 创建Vue实例
+      // 调用createComponentInstanceForVnode，实际相当于调用_init（src/core/instance/init.js）
       const child = vnode.componentInstance = createComponentInstanceForVnode(
         vnode,
         activeInstance
       )
+      // 调用$mount方法挂载子组件
       child.$mount(hydrating ? vnode.elm : undefined, hydrating)
     }
   },
@@ -112,10 +116,12 @@ export function createComponent (
   }
 
   // 1. 构造子类构造函数
+  // baseCtor实际就是Vue，定义在最开始初始化Vue的时候，在src/core/global-api/index.js中的initGlobalAPI函数
   const baseCtor = context.$options._base
 
   // plain options object: turn it into a constructor
   if (isObject(Ctor)) {
+    // Vue.extend函数定义在src/core/global-api/extend.js
     Ctor = baseCtor.extend(Ctor)
   }
 
@@ -225,6 +231,7 @@ export function createComponentInstanceForVnode (
     options.render = inlineTemplate.render
     options.staticRenderFns = inlineTemplate.staticRenderFns
   }
+  // vnode.componentOptions.Ctor对应的就是子组件的构造函数，实际上是继承于Vue的一个构造函数Sub，相当于new Sub(options)
   return new vnode.componentOptions.Ctor(options)
 }
 

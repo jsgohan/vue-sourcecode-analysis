@@ -149,6 +149,7 @@ export function createPatchFunction (backend) {
     }
 
     vnode.isRootInsert = !nested // for transition enter check
+    // createComponent方法目的是尝试创建子组件
     if (createComponent(vnode, insertedVnodeQueue, parentElm, refElm)) {
       return
     }
@@ -156,6 +157,7 @@ export function createPatchFunction (backend) {
     const data = vnode.data
     const children = vnode.children
     const tag = vnode.tag
+    // 对tag合法性在非生产环境下做校验，是否为合法标签
     if (isDef(tag)) {
       if (process.env.NODE_ENV !== 'production') {
         if (data && data.pre) {
@@ -203,7 +205,7 @@ export function createPatchFunction (backend) {
           // 执行所有的create钩子并把vnode push到insertedVnodeQueue中
           invokeCreateHooks(vnode, insertedVnodeQueue)
         }
-        // 调用insert把DOM插入到父节点中，整个vnode树节点的插入顺序是先子后父
+        // 调用insert把DOM插入到父节点中，因为是createElm是递归调用，子元素会优先调用insert，所以整个vnode树节点的插入顺序是先子后父
         insert(parentElm, vnode.elm, refElm)
       }
 
@@ -711,7 +713,7 @@ export function createPatchFunction (backend) {
   }
 
   /**
-   * oldVnode表示旧的VNode节点，它可以不存在或者是一个DOM对象
+   * oldVnode表示旧的VNode节点，它可以不存在或者是一个DOM对象，在首次渲染时，传入的为vm.$el，其实对应的就是id为app的DOM对象模板中的<div id="app">
    * vnode表示执行_render后返回的VNode的节点
    * hydrating表示是否是服务端渲染
    * removeOnly是给transition-group用的
@@ -761,6 +763,7 @@ export function createPatchFunction (backend) {
           }
           // either not server-rendered, or hydration failed.
           // create an empty node and replace it
+          // 替换DOM为空VNode对象
           oldVnode = emptyNodeAt(oldVnode)
         }
 
