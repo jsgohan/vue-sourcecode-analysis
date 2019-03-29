@@ -32,6 +32,9 @@ export const emptyNode = new VNode('', {}, [])
 
 const hooks = ['create', 'activate', 'update', 'remove', 'destroy']
 
+// 比较逻辑只要两个vnode的key不相等，则是不同的
+// 否则继续，对于同步组件，判断isComment、data、input类型是否相同
+// 对于异步组件，判断asyncFactory是否相同
 function sameVnode (a, b) {
   return (
     a.key === b.key && (
@@ -562,9 +565,11 @@ export function createPatchFunction (backend) {
       for (i = 0; i < cbs.update.length; ++i) cbs.update[i](oldVnode, vnode)
       if (isDef(i = data.hook) && isDef(i = i.update)) i(oldVnode, vnode)
     }
-    // 3. 完成patch过程，如果vnode是个文本节点且新旧文本不相同，则直接替换文本内容。如果不是文本节点，则判断它们的子节点，并分了几种情况处理：
+    // 3. 完成patch过程
+    //   如果vnode是个文本节点且新旧文本不相同，则直接替换文本内容
+    //   如果不是文本节点，则判断它们的子节点，并分了几种情况处理：
     //   a. oldCh与ch都存在且不相同时，使用updateChildren函数来更新子节点
-    //   b. 如果只有ch存在，表示旧节点不去要了。如果旧的节点时文本节点则先将节点的文本清除，然后通过addVnodes将ch批量插入到新节点elm下
+    //   b. 如果只有ch存在，表示旧节点不需要了。如果旧的节点时文本节点则先将节点的文本清除，然后通过addVnodes将ch批量插入到新节点elm下
     //   c. 如果只有oldCh存在，表示更新的是空节点，则需要将旧的节点通过removeVnodes全部清除
     //   d. 当只有旧节点是文本节点的时候，则清除其节点文本内容
     if (isUndef(vnode.text)) {
